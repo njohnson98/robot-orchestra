@@ -7,7 +7,7 @@
 %
 % Inputs: 
 %		Tempo: controls the tempo of the song. This is a number between 0 and 1
-%		Octive: The ocive of the song (normally 4)
+%		Octave: The ocive of the song (normally 4)
 %		fs_kHz: sampling rate in kHz.
 %       tempo_resolution: this is a value between 0 and 1. 1 being full 
 %           resolution. Be careful setting this too high. 1 will lock up
@@ -28,16 +28,16 @@ close all
 %% Set up the world
 fs_kHz = 5;
 
-% Set the tempo and the octive for the conductor
-Octive = 4;
-tempo_s = 0.6 %This is the time in seconds for each note
+% Set the tempo and the octave for the conductor
+Octave = 4;
+tempo_s = 0.6; %This is the time in seconds for each note
 
 %% Parameters for code simulation
-tempo_resolution = .05; %this is a value between 0 and 1. 1 being full resolution
-time_offset = 60;   % This is the delay to the start of the song.
+tempo_resolution = .05; % This is a value between 0 and 1. 1 being full resolution
+time_offset = 6000;   % This is the delay to the start of the song.
 
 %% Create the song given the tempo
-[song_freq_Hz, song_duration_s] = conductor_simulation(tempo_s,Octive);
+[song_freq_Hz, song_duration_s] = conductor_simulation(tempo_s,Octave);
 
 % form up the cumulative durations
 cumulative_duration_s = zeros(1, length(song_duration_s));
@@ -56,7 +56,7 @@ time_s(length(time_s)) = total_duration_s;
 
 
 %% Create the digital signal
-min_time_index = 1; %start the min time index at the start
+min_time_index = 1; % start the min time index at the start
 % loop through all the freqs and generate a sin wave for each freq
 for i=1:length(song_freq_Hz)
 	max_time_index = find(time_s >= cumulative_duration_s(i),1); %find the times that correspond to this duration of time
@@ -71,13 +71,13 @@ for i=1:length(song_freq_Hz)
 end
 
 %% Create a signal to test the system
-%%Put two copies of the song together
+% Put two copies of the song together
 signal = [digital, digital];
-signal = circshift(signal, time_offset);
+signal = circshift(signal, time_offset);  % circularly shifts array
 
 
 %% Plot the Time Domain
-plot(time_s,digital)
+plot(time_s,digital)  % unshifted signal
 xlabel("time (s)")
 ylabel("Amplitude")
 title("Row Row Row Your Boat")
@@ -93,17 +93,73 @@ ylabel("Amplitude")
 title("Spectrum of Row Row Row Your Boat")
 
 %% Do the envelope detection
-
+% don't need entire length of signal
+signal = signal(1:round(length(signal)/3));
+time_signal = 0:1/fs_Hz:length(signal)/fs_Hz;
+downsample_factor = 22;
+signal_sq = signal .* signal;
+sigenv = sqrt(lowpass(downsample(signal_sq, downsample_factor), 10, fs_Hz));
+time_samp = downsample(time_signal, downsample_factor);
+real_sigenv = real(sigenv);
+plot(time_samp, real_sigenv);
+% https://www.mathworks.com/help/dsp/ug/envelope-detection.html
 
 %% Find the Tempo
+threshold = 0.5;
+digital_env = real_sigenv > threshold;  % digitize
+subplot(2,1,1);
+plot(time_samp, digital_env);
+xlabel('Time (sec)');
+ylabel('Envelope');
+title('Offset Signal');
+subplot(2,1,2);
+plot(time_s, digital);
+xlabel('Time (sec)');
+ylabel('Amplitude');
+title('Non-Delayed Signal')
 
+% find rests
+rest_indices = find(digital_env == 0);
+toggle_indices = [];
+for i = 2:length(rest_indices)-1
+   if rest_indices(i-1) ~= rest_indices(i)-1 || rest_indices(i+1) ~= rest_indices(i)+1
+       toggle_indices = [toggle_indices rest_indices(i)];
+   end
+end
+toggle_indices;
+
+% find rests and average time length
+total_rests = 0;
+rest_time = 0;
+for i = 1:length(toggle_indices)-2
+   if digital_env(toggle_indices(i)+1) == 0
+       total_rests = total_rests + 1;
+       rest_time = rest_time + time_samp(toggle_indices(i+1)) - time_samp(toggle_indices(i));
+   end
+end
+% 1 beat time
+tempo_calc = rest_time/total_rests;
 
 %% Sync the time
+note_lengths = [];
+for i = 2:length(toggle_indices)-1
+    note_lengths = [note_lengths, time_samp(toggle_indices(i+1)) - time_samp(toggle_indices(i))];
+end
 
-actual_time_offset_s = time_s(time_offset) %print out the actual start time to compare.
+note_lengths = round(note_lengths ./ tempo_calc);
+beats = [2,1,2,1,2,1,1,1,2,1,2,1,1,1,2,1,1,1,6,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,2,1,1,1,5,1];
+% find where note_lengths exists in beats
+start_index = strfind(beats, note_lengths);
+time = 0;
+for i = 1:start_index-1
+    time = time + tempo_calc*beats(i);
+end
+calc_time_offset = time_samp(toggle_indices(start_index)) - time;
 
-Y = fft(signal);
-size(Y)
-size(signal)
-size(time_s)
-plot(time_s, Y);
+
+actual_time_offset_s = time_s(time_offset); %print out the actual start time to compare.
+
+fprintf('Calculated Time Offset: %f\n', calc_time_offset);
+fprintf('Actual Time Offset: %f\n', actual_time_offset_s);
+fprintf('Calculated Tempo: %f\n', tempo_calc);
+fprintf('Actual Tempo: %f\n', tempo_s);
