@@ -30,7 +30,18 @@ int main() {
 
 
 void setup() {
-    // do setup
+    // wait for start button to be pressed
+
+    readOctave();
+
+    // read mode switch
+    mode = 0;
+}
+
+
+void readOctave() {
+    // read octave value from potentiometer
+    octave = 4;
 }
 
 
