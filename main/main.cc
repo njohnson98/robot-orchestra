@@ -38,6 +38,12 @@ int songLength = 54;
 int beats[] = {2,1,2,1,2,1,1,1,2,1,2,1,1,1,2,1,1,1,6,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,2,1,1,1,5,1};
 songTempo = 250;
 
+// set high and low servo values
+int strumLow = 50;
+int strumHigh = 100;
+int fretLow = 50;
+int fretHigh = 100;
+
 
 // called once on startup
 void setup() {
@@ -83,10 +89,10 @@ void loop() {
     digitalWrite(syncLEDPIN, HIGH);
 
     // execute code for current mode
-    if (mode == 0) {
+    if (mode == 0) {  // play mode
         tempoSync();
         timingSync();
-    } else if (mode == "test") {
+    } else {  // test mode
         // read tempo potentiometer and set tempo
         tempoPot = analogRead(A1);
         tempo = songTempo * float(tempoPot) / TempoCal;
@@ -135,10 +141,13 @@ void playSong(int tempo) {
     // play song until stop button is pressed
     int i = 0;
     while (!digitalRead(A3)) {
-        // play song
+        // play current note
         duration = beats[i] * tempo;
         tone(speakerPIN, notes[i], duration);
         delay(duration);
+
+        // move servos to opposite position
+        moveServos();
 
         // increment index
         i++;
@@ -152,4 +161,19 @@ void playSong(int tempo) {
     digitalWrite(syncLEDPIN, LOW);
     digitalWrite(playLEDPIN, LOW);
         
+}
+
+
+void moveServos() {
+    if (strumServo.read() == strumHigh) {
+            strumServo.write(strumLow);
+        } else {
+            strumServo.write(strumHigh);
+        }
+
+        if (fretServo.read() == fretHigh) {
+            fretServo.write(fretLow);
+        } else {
+            fretServo.write(fretHigh);
+        }
 }
