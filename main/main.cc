@@ -22,11 +22,13 @@
 #define TempoPotMax 1023
 #define PwmMax 255
 
-#define speakerPIN 4
-#define fretMotorPIN 5
-#define strumMotorPIN 6
+#define speakerPIN 5
+#define fanPIN 6
 #define syncLEDPIN 7
 #define playLEDPIN 8
+
+Servo strumServo;
+Servo fretServo;
 
 int mode;
 int octave;
@@ -34,9 +36,7 @@ int tempo;
 
 int songLength = 54;
 int beats[] = {2,1,2,1,2,1,1,1,2,1,2,1,1,1,2,1,1,1,6,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,2,1,1,1,5,1};
-
-Servo servo_9;
-Servo servo_10;
+songTempo = 250;
 
 
 // called once on startup
@@ -47,21 +47,24 @@ void setup() {
     pinMode(A1, INPUT);  // tempo potentiometer
     pinMode(A2, INPUT);  // octave potentiometer
     pinMode(A3, INPUT);  // start/stop button
+    pinMode(A4, INPUT);  // microphone
 
     // set up outputs
     pinMode(speakerPIN, OUTPUT);
-    pinMode(fretMotorPIN, OUTPUT);
-    pinMode(strumMotorPIN, OUTPUT);
+    pinMode(fanPIN, OUTPUT);
     pinMode(syncLEDPIN, OUTPUT);
     pinMode(playLEDPIN, OUTPUT);
 
-    servo_9.attach(9);
-    servo_10.attach(10);
+    strumServo.attach(9);
+    fretServo.attach(10);
 
     // set initial motor and servo conditions
     digitalWrite(motorPIN, 0);
-    servo_9.write(5);
-    servo_10.write(5);
+    strumServo.write(5);
+    fretServo.write(5);
+
+    digitalWrite(syncLEDPIN, LOW);
+    digitalWrite(playLEDPIN, LOW);
 
 }
 
@@ -75,18 +78,21 @@ void loop() {
     readOctave();
 
     // read mode switch
-    mode = 0;
+    mode = digitalRead(A0);
 
-    // fix condition
-    if (mode == "conductor") {
-        tempo = tempoSync();
+    digitalWrite(syncLEDPIN, HIGH);
+
+    // execute code for current mode
+    if (mode == 0) {
+        tempoSync();
         timingSync();
-        playSong();
     } else if (mode == "test") {
-        // read tempo potentiometer
-        tempo = 5;
-        playSong();
+        // read tempo potentiometer and set tempo
+        tempoPot = analogRead(A1);
+        tempo = songTempo * float(tempoPot) / TempoCal;
     }
+
+    playSong();
 
 }
 
@@ -99,6 +105,7 @@ void readOctave() {
 
 void tempoSync() {
     // tempo sync
+    tempo = 200;
 }
 
 
@@ -122,9 +129,27 @@ void playSong(int tempo) {
 
     int notes[] = {C, rest, C, rest, C, rest, D, rest, E, rest, E, rest, D, rest, E, rest, F, rest, G, rest, high_C, rest, high_C, rest, high_C, rest, G, rest, G, rest, G, rest, E, rest, E, rest, E, rest, C, rest, C, rest, C, rest, G, rest, F, rest, E, rest, D, rest, C, rest};
 
-    // read value of stop button for while condition
-    while (true) {
-        // play song (example in conductor file)
+    digitalWrite(syncLEDPIN, LOW);
+    digitalWrite(playLEDPIN, HIGH);
+
+    // play song until stop button is pressed
+    int i = 0;
+    while (!digitalRead(A3)) {
+        // play song
+        duration = beats[i] * tempo;
+        tone(speakerPIN, notes[i], duration);
+        delay(duration);
+
+        // increment index
+        i++;
+        if (i >= songLength) {
+            i = 0;
+        }
     }
+
+    // reset fan and LEDs
+    noTone(fanPIN);
+    digitalWrite(syncLEDPIN, LOW);
+    digitalWrite(playLEDPIN, LOW);
         
 }
