@@ -28,7 +28,6 @@
 #include <math.h>
 #include <Servo.h>
 #include <stdio.h>
-#include <math.h>
 
 #define TempoCal 512
 #define TempoPotMax 1023
@@ -44,11 +43,10 @@
 #define Fan 9
 #define StartPB 3
 #define ResetPB 4
-#define Speaker 10
+#define Speaker 11
 // #define Mic A3
 // #define Servo 11
 //NOTE: Will use SCL/SDA pins for servo driver in actual circuit
-
 
 Servo strumServo;
 Servo fretServo;
