@@ -1,21 +1,34 @@
 //-----------------------------------------------------
-// Engineer: Nathan Johnson
+// Engineers: Nathan Johnson, James Springer
 // Overview
-//    When this device is turned on it plays the song Row
-//    Row Row Your Boat.
+//     When this device is turned on it plays the song Row
+//     Row Row Your Boat.
 // Design Name:   Spongebot Guitarpants
 // File Name:     main.cc
 //
 // Inputs: 
-// Outputs: 
+//     Test Tempo - Determined by potentiometer
+//     Octave - Determined by potentiometer
+//     Mode - Selected with slider
+//     Start - Push Button
+//     Reset - Push Button
+//     Audio Input - Conductor
+// Outputs:
+//     Sync Indicator - LED
+//     Play Indicator - LED
+//     Audio Output - Speaker
+//     Servo Motors
+//     Fan
 //
 // History:       30 September 2021:  File created
-//                3 October 2021:     Arduino Implementation
+//                3 October 2021:     Arduino implementation
+//                8 October 2021:     Fixed Arduino pin information
 //-----------------------------------------------------
 
 #include <math.h>
 #include <Servo.h>
 #include <stdio.h>
+#include <math.h>
 
 #define TempoCal 512
 #define TempoPotMax 1023
@@ -58,7 +71,6 @@ int fretHigh = 100;
 
 // called once on startup
 void setup() {
-
     // set up inputs	
 	pinMode(TempoPot, INPUT);
 	pinMode(OctaveSelectPot, INPUT);
@@ -74,7 +86,6 @@ void setup() {
     pinMode(Fan, OUTPUT);
   	//pinMode(Servo, OUTPUT);
 
-   
     strumServo.attach(9);
     fretServo.attach(10);
 
@@ -90,11 +101,11 @@ void setup() {
 
 // called repeatedly after setup
 void loop() {
-
     // wait for start button to be pressed
     while (!digitalRead(StartPB)) {}
 
-    readOctave();
+    // set the octave based on range of potentiometer value
+    octave = ( int(analogRead(OctaveSelectPot)) / (10000 / 8) ) + 1;
 
     // read mode switch
     mode = digitalRead(ModeSelect);
@@ -115,12 +126,6 @@ void loop() {
 }
 
 
-void readOctave() {
-    // read octave value from potentiometer
-    octave = 4;
-}
-
-
 void tempoSync() {
     // tempo sync
   	digitalWrite(SyncLED, HIGH);
@@ -132,7 +137,6 @@ void timingSync() {
     // timing sync
     digitalWrite(SyncLED, HIGH);
     delay(2000);
-  
 }
 
 
@@ -161,8 +165,10 @@ void playSong(int tempo) {
         tone(Speaker, notes[i], duration);
         delay(duration);
 
-        // move servos to opposite position
-        moveServos();
+        // move servos to opposite position if note is not a rest
+        if (notes[i] != rest) {
+            moveServos();
+        }
 
         // increment index
         ++i;
@@ -171,20 +177,19 @@ void playSong(int tempo) {
         }
     }
 
-    // reset fan and LEDs
-    noTone(Fan);
+    // reset speaker and LEDs
+    noTone(Speaker);
     digitalWrite(Speaker, LOW);
     digitalWrite(SyncLED, LOW);
-    digitalWrite(PlayLED, LOW);
-        
+    digitalWrite(PlayLED, LOW);   
 }
 
 
 void moveServos() {
     if (strumServo.read() == strumHigh) {
-            strumServo.write(strumLow);
+        strumServo.write(strumLow);
     } else {
-            strumServo.write(strumHigh);
+        strumServo.write(strumHigh);
     }
 
     if (fretServo.read() == fretHigh) {
