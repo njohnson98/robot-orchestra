@@ -29,6 +29,8 @@
 #include <Servo.h>
 #include <stdio.h>
 
+#include "dsp.h"
+
 #define TempoCal 512
 #define TempoPotMax 1023
 #define PwmMax 255
@@ -44,9 +46,8 @@
 #define StartPB 3
 #define ResetPB 4
 #define Speaker 11
-// #define Mic A3
-// #define Servo 11
-//NOTE: Will use SCL/SDA pins for servo driver in actual circuit
+#define Mic 16
+
 
 Servo strumServo;
 Servo fretServo;
@@ -69,31 +70,32 @@ int fretHigh = 100;
 
 // called once on startup
 void setup() {
-    // set up inputs	
+  Serial.begin(9600);  // Set up serial port (only used for testing)
+  
+  // set up inputs	
 	pinMode(TempoPot, INPUT);
 	pinMode(OctaveSelectPot, INPUT);
 	pinMode(ModeSelect, INPUT);
 	pinMode(StartPB, INPUT);
 	pinMode(ResetPB, INPUT);
-    // pinMode(Mic, INPUT);
+  pinMode(Mic, INPUT);
   
-    // set up outputs
-  	pinMode(SyncLED, OUTPUT);
+  // set up outputs
+  pinMode(SyncLED, OUTPUT);
 	pinMode(PlayLED, OUTPUT);
 	pinMode(Speaker, OUTPUT);
-    pinMode(Fan, OUTPUT);
-  	//pinMode(Servo, OUTPUT);
+  pinMode(Fan, OUTPUT);
+  
+  strumServo.attach(9);
+  fretServo.attach(10);
 
-    strumServo.attach(9);
-    fretServo.attach(10);
-
-    // set initial motor and servo conditions
-    strumServo.write(5);
-    fretServo.write(5);
-    digitalWrite(Fan, LOW);
-  	digitalWrite(Speaker, LOW);
-    digitalWrite(SyncLED, LOW);
-    digitalWrite(PlayLED, LOW);
+  // set initial motor and servo conditions
+  strumServo.write(5);
+  fretServo.write(5);
+  digitalWrite(Fan, LOW);
+  digitalWrite(Speaker, LOW);
+  digitalWrite(SyncLED, LOW);
+  digitalWrite(PlayLED, LOW);
 }
 
 
@@ -103,8 +105,8 @@ void loop() {
     while (!digitalRead(StartPB)) {}
 
     // set the octave based on range of potentiometer value
-    octave = ( int(analogRead(OctaveSelectPot)) / (10000 / 8) ) + 1;
-
+    //octave = ( int(analogRead(OctaveSelectPot)) / (10000 / 8) ) + 1;
+    octave = 5;
     // read mode switch
     mode = digitalRead(ModeSelect);
 
@@ -112,12 +114,29 @@ void loop() {
 
     // execute code for current mode
     if (mode == 0) {  // play mode
-        tempoSync();
+        Serial.print("Starting tempo calc\n");
+//        while (true) {
+//          float noteAvg = 0;
+//          for (int i = 0; i < 20; ++i) {
+//                int noteVal = analogRead(Mic) - 1023.0*3.3/5.0/2.0;
+//                noteAvg += float(abs(noteVal)) / float(20);
+//            }
+//          Serial.println(noteAvg);
+//          delay(100);
+//        }
+        
+        float calc_tempo = dsp::findTempo(Mic);
+        Serial.print("Calculated Tempo (ms): ");
+        Serial.print(calc_tempo) ;
+        tempo = int(calc_tempo);     
+        // tempoSync();
         timingSync();
     } else {  // test mode
         // read tempo potentiometer and set tempo
         int tempoPot = analogRead(TempoPot);
         tempo = songTempo * float(tempoPot) / TempoCal;
+        Serial.println("TEMPO");
+        Serial.println(tempo);
     }
 
     playSong(tempo);
