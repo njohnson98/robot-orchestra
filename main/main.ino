@@ -31,6 +31,8 @@
 
 #include "dsp.h"
 
+#define DEBUG
+
 #define TempoCal 512
 #define TempoPotMax 1023
 #define PwmMax 255
@@ -70,32 +72,34 @@ int fretHigh = 100;
 
 // called once on startup
 void setup() {
-  Serial.begin(9600);  // Set up serial port (only used for testing)
-  
-  // set up inputs	
+    #ifdef DEBUG
+        Serial.begin(9600);  // Set up serial port (only used for testing)
+    #endif  // DEBUG
+
+    // set up inputs	
 	pinMode(TempoPot, INPUT);
 	pinMode(OctaveSelectPot, INPUT);
 	pinMode(ModeSelect, INPUT);
 	pinMode(StartPB, INPUT);
 	pinMode(ResetPB, INPUT);
-  pinMode(Mic, INPUT);
+    pinMode(Mic, INPUT);
   
-  // set up outputs
-  pinMode(SyncLED, OUTPUT);
+    // set up outputs
+    pinMode(SyncLED, OUTPUT);
 	pinMode(PlayLED, OUTPUT);
 	pinMode(Speaker, OUTPUT);
-  pinMode(Fan, OUTPUT);
+    pinMode(Fan, OUTPUT);
   
-  strumServo.attach(9);
-  fretServo.attach(10);
+    strumServo.attach(9);
+    fretServo.attach(10);
 
-  // set initial motor and servo conditions
-  strumServo.write(5);
-  fretServo.write(5);
-  digitalWrite(Fan, LOW);
-  digitalWrite(Speaker, LOW);
-  digitalWrite(SyncLED, LOW);
-  digitalWrite(PlayLED, LOW);
+    // set initial motor and servo conditions
+    strumServo.write(5);
+    fretServo.write(5);
+    digitalWrite(Fan, LOW);
+    digitalWrite(Speaker, LOW);
+    digitalWrite(SyncLED, LOW);
+    digitalWrite(PlayLED, LOW);
 }
 
 
@@ -114,29 +118,23 @@ void loop() {
 
     // execute code for current mode
     if (mode == 0) {  // play mode
-        Serial.print("Starting tempo calc\n");
-//        while (true) {
-//          float noteAvg = 0;
-//          for (int i = 0; i < 20; ++i) {
-//                int noteVal = analogRead(Mic) - 1023.0*3.3/5.0/2.0;
-//                noteAvg += float(abs(noteVal)) / float(20);
-//            }
-//          Serial.println(noteAvg);
-//          delay(100);
-//        }
+        #ifdef DEBUG
+            Serial.print("Starting tempo calc\n");
+        #endif  // DEBUG
         
         float calc_tempo = dsp::findTempo(Mic);
-        Serial.print("Calculated Tempo (ms): ");
-        Serial.print(calc_tempo) ;
+
+        #ifdef DEBUG
+            Serial.print("Calculated Tempo (ms): ");
+            Serial.print(calc_tempo) ;
+        #endif  // DEBUG 
+
         tempo = int(calc_tempo);     
-        // tempoSync();
         timingSync();
     } else {  // test mode
         // read tempo potentiometer and set tempo
         int tempoPot = analogRead(TempoPot);
         tempo = songTempo * float(tempoPot) / TempoCal;
-        Serial.println("TEMPO");
-        Serial.println(tempo);
     }
 
     playSong(tempo);
