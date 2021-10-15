@@ -29,12 +29,12 @@ close all
 fs_kHz = 5;
 
 % Set the tempo and the octave for the conductor
-Octave = 4;
+Octave = 8;
 tempo_s = 0.6; %This is the time in seconds for each note
 
 %% Parameters for code simulation
 tempo_resolution = .05; % This is a value between 0 and 1. 1 being full resolution
-time_offset = 6000;   % This is the delay to the start of the song.
+time_offset = 5000;   % This is the delay to the start of the song.
 
 %% Create the song given the tempo
 [song_freq_Hz, song_duration_s] = conductor_simulation(tempo_s,Octave);
@@ -111,11 +111,13 @@ subplot(2,1,1);
 plot(time_samp, digital_env);
 xlabel('Time (sec)');
 ylabel('Envelope');
+ylim([-.1,1.1]);
 title('Offset Signal');
 subplot(2,1,2);
 plot(time_s, digital);
 xlabel('Time (sec)');
 ylabel('Amplitude');
+ylim([-1.1,1.1]);
 title('Non-Delayed Signal')
 
 % find rests
@@ -159,7 +161,9 @@ calc_time_offset = time_samp(toggle_indices(start_index)) - time;
 
 actual_time_offset_s = time_s(time_offset); %print out the actual start time to compare.
 
-fprintf('Calculated Time Offset: %f\n', calc_time_offset);
+fprintf('Calculated Time Offset: %f\t', calc_time_offset);
 fprintf('Actual Time Offset: %f\n', actual_time_offset_s);
-fprintf('Calculated Tempo: %f\n', tempo_calc);
+fprintf('Time Offset Delta: %f\n', calc_time_offset - actual_time_offset_s);
+fprintf('Calculated Tempo: %f\t', tempo_calc);
 fprintf('Actual Tempo: %f\n', tempo_s);
+fprintf('Tempo Delta: %f\n', tempo_calc - tempo_s);
