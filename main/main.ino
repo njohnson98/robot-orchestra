@@ -111,6 +111,7 @@ void loop() {
     // set the octave based on range of potentiometer value
     //octave = ( int(analogRead(OctaveSelectPot)) / (10000 / 8) ) + 1;
     octave = 5;
+    int start_index = 0;
     // read mode switch
     mode = digitalRead(ModeSelect);
 
@@ -122,22 +123,26 @@ void loop() {
             Serial.print("Starting tempo calc\n");
         #endif  // DEBUG
         
-        float calc_tempo = dsp::findTempo(Mic);
-
+        bool notes_present[TOTAL_TOGGLES];
+        unsigned long timestamps[TOTAL_TOGGLES];
+        int calc_tempo = dsp::findTempo(Mic, notes_present, timestamps);
         #ifdef DEBUG
             Serial.print("Calculated Tempo (ms): ");
-            Serial.print(calc_tempo) ;
+            Serial.println(calc_tempo) ;
         #endif  // DEBUG 
-
-        tempo = int(calc_tempo);     
-        timingSync();
+  
+        start_index = dsp::findTimeOffset(tempo, notes_present, timestamps, beats);
+        #ifdef DEBUG
+            Serial.print("Calculated Start Index: ");
+            Serial.println(start_index);
+        #endif  // DEBUG
     } else {  // test mode
         // read tempo potentiometer and set tempo
         int tempoPot = analogRead(TempoPot);
-        tempo = songTempo * float(tempoPot) / TempoCal;
+        tempo = songTempo * tempoPot / TempoCal;
     }
 
-    playSong(tempo);
+    playSong(tempo, start_index);
 }
 
 
@@ -155,7 +160,8 @@ void timingSync() {
 }
 
 
-void playSong(int tempo) {
+// start index is index of first note to play in beats
+void playSong(int tempo, int start_index) {
     // calculate note values based on octave
     int C = 16.3516 * pow(2, octave);
     int D = 18.35405 * pow(2, octave);
@@ -173,7 +179,7 @@ void playSong(int tempo) {
     digitalWrite(PlayLED, HIGH);
 
     // play song until stop button is pressed
-    int i = 0;
+    int i = (start_index < songLength && start_index >= 0) ? start_index : 0;  // make sure start_index is valid
     while (!digitalRead(ResetPB)) {
         // play current note
         duration = beats[i] * tempo;
