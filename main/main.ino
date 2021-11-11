@@ -47,8 +47,8 @@
 #define OctaveSelectPot 15
 #define ModeSelect 5
 #define Fan 9
-#define StartPB 3
-#define ResetPB 4
+#define StartPB 4
+#define ResetPB 3
 #define Speaker 11
 #define Mic 16
 
