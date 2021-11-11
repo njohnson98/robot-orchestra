@@ -3,8 +3,8 @@
 #include "Arduino.h"
 
 #define DOWNSAMPLE_RATE 55  // number of samples to average in digital low pass filter
-#define NOTE_THRESHOLD 15   // threshold to define whether note prestent or not
-#define MIC_OFFSET 1023.0*3.3/5.0/2.0  // mic offset for 3.3V input to mic
+#define NOTE_THRESHOLD .2   // threshold to define whether note prestent or not
+#define MIC_OFFSET 0 // mic offset is 0 now after the filter  --> mic offset before: 1023.0*5.0/5.0/2.0
 
 namespace dsp {
 
@@ -17,6 +17,19 @@ namespace dsp {
             analogRead(mic);  // clear out to make sure we're getting good readings
         }
 
+        int micCal = 0;
+        unsigned long stopTime = millis() + 1000;  // 1 second to calibrate
+        while (millis() < stopTime) {
+            int micVal = analogRead(mic);
+            micCal = (micVal > micCal) ? micVal : micCal;
+        }
+
+        #ifdef DEBUG
+            Serial.print("Mic Cal: ");
+            Serial.println(micCal);
+        #endif  // DEBUG
+
+        int noteThreshold = int(micCal * NOTE_THRESHOLD);
         unsigned long tempTimestamp = 0;
         bool isConseq = false;  // used to make sure we don't get one false reading that indicates we have a note, must get 2 consecqutive
         while (numNotes < TOTAL_TOGGLES) {
@@ -26,7 +39,7 @@ namespace dsp {
                 noteAvg += float(abs(noteVal)) / float(DOWNSAMPLE_RATE);
             }
 
-            bool notePresent = noteAvg > NOTE_THRESHOLD;  // true if above threshold, false otherwise
+            bool notePresent = noteAvg > noteThreshold;  // true if above threshold, false otherwise
             if (numNotes >= 0 && notePresent != prevNotePresent) {
                 if (!isConseq) {
                     isConseq = true;
@@ -44,6 +57,7 @@ namespace dsp {
                 }
                 
             } else if (numNotes < 0) {
+            
                 prevNotePresent = notePresent;
                 ++numNotes;
                 #ifdef DEBUG
@@ -77,9 +91,20 @@ namespace dsp {
         unsigned long note_timestamp = 0;
         for (int i = 0; i < TOTAL_TOGGLES - 1; i++) {
             note_length = round(float(timestamps[i+1]-timestamps[i])/float(tempo));
+            #ifdef DEBUG
+                Serial.print(note_length);
+                Serial.print(" ");
+            #endif  // DEBUG
             if (note_length == 5 || note_length == 6) {
                 note_timestamp = timestamps[i];
                 break;
+            }
+
+            if (i == TOTAL_TOGGLES - 2) {
+                #ifdef DEBUG
+                    Serial.println("Failed to find time offset, playing song from beginning");
+                #endif  // DEBUG
+                return 0;
             }
         }
 

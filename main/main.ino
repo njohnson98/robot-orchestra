@@ -36,6 +36,8 @@
 #define TempoCal 512
 #define TempoPotMax 1023
 #define PwmMax 255
+#define TEMPO_MIN 30
+#define TEMPO_MAX 500
 
 
 // pinouts
@@ -125,10 +127,10 @@ void loop() {
         
         bool notes_present[TOTAL_TOGGLES];
         unsigned long timestamps[TOTAL_TOGGLES];
-        int calc_tempo = dsp::findTempo(Mic, notes_present, timestamps);
+        tempo = dsp::findTempo(Mic, notes_present, timestamps);
         #ifdef DEBUG
             Serial.print("Calculated Tempo (ms): ");
-            Serial.println(calc_tempo) ;
+            Serial.println(tempo) ;
         #endif  // DEBUG 
   
         start_index = dsp::findTimeOffset(tempo, notes_present, timestamps, beats);
@@ -139,9 +141,11 @@ void loop() {
     } else {  // test mode
         // read tempo potentiometer and set tempo
         int tempoPot = analogRead(TempoPot);
-        tempo = songTempo * tempoPot / TempoCal;
+        tempo = int(float(songTempo) * float(tempoPot) / float(TempoCal));
+        tempo = (tempo < TEMPO_MIN) ? TEMPO_MIN : tempo;
+        tempo = (tempo > TEMPO_MAX) ? TEMPO_MAX : tempo;
     }
-
+    
     playSong(tempo, start_index);
 }
 
@@ -162,6 +166,12 @@ void timingSync() {
 
 // start index is index of first note to play in beats
 void playSong(int tempo, int start_index) {
+    #ifdef DEBUG
+        Serial.print("TEMPO: ");
+        Serial.print(tempo);
+        Serial.print(", START INDEX: ");
+        Serial.println(start_index);
+    #endif  // DEBUG
     // calculate note values based on octave
     int C = 16.3516 * pow(2, octave);
     int D = 18.35405 * pow(2, octave);

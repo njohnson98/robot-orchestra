@@ -1,6 +1,7 @@
 #ifndef DSP_
 #define DSP_
 
+#define DEBUG
 #define TOTAL_TOGGLES 34    // number of notes to record before calculating tempo
 #define SONG_LENGTH 54
 
