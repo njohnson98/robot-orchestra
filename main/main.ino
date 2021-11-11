@@ -65,7 +65,7 @@ int songLength = 54;
 int beats[] = {2,1,2,1,2,1,1,1,2,1,2,1,1,1,2,1,1,1,6,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,2,1,1,1,5,1};
 int songTempo = 250;
 
-// set high and low servo values
+// set high and low servo values  
 int strumLow = 50;
 int strumHigh = 100;
 int fretLow = 50;
@@ -88,8 +88,8 @@ void setup() {
   
     // set up outputs
     pinMode(SyncLED, OUTPUT);
-	pinMode(PlayLED, OUTPUT);
-	pinMode(Speaker, OUTPUT);
+	  pinMode(PlayLED, OUTPUT);
+	  pinMode(Speaker, OUTPUT);
     pinMode(Fan, OUTPUT);
   
     strumServo.attach(9);
@@ -113,6 +113,10 @@ void loop() {
     // set the octave based on range of potentiometer value
     //octave = ( int(analogRead(OctaveSelectPot)) / (10000 / 8) ) + 1;
     octave = analogRead(OctaveSelectPot) < 512 ? 4 : 6;
+    #ifdef DEBUG
+        Serial.print("Octave: ");
+        Serial.println(octave);
+    #endif  // DEBUG
 
     int start_index = 0;
     // read mode switch

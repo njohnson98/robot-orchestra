@@ -3,7 +3,7 @@
 #include "Arduino.h"
 
 #define DOWNSAMPLE_RATE 40  // number of samples to average in digital low pass filter
-#define NOTE_THRESHOLD .15   // threshold to define whether note prestent or not
+#define NOTE_THRESHOLD .4   // threshold to define whether note prestent or not
 #define MIC_OFFSET 0 // mic offset is 0 now after the filter  --> mic offset before: 1023.0*5.0/5.0/2.0
 #define CONSEQ_NOTES 4
 
@@ -19,11 +19,12 @@ namespace dsp {
         }
 
         int micCal = 0;
-        unsigned long stopTime = millis() + 1000;  // 1 second to calibrate
-        while (millis() < stopTime) {
-            int micVal = analogRead(mic);
-            micCal = (micVal > micCal) ? micVal : micCal;
-        }
+        //unsigned long stopTime = millis() + 1000;  // 1 second to calibrate
+        // while (millis() < stopTime) {
+        //    int micVal = analogRead(mic);
+        //    micCal = (micVal > micCal) ? micVal : micCal;
+        //}
+        delay(100);
         micCal = 100;
 
         #ifdef DEBUG
@@ -72,13 +73,13 @@ namespace dsp {
 
         int tempo = 0;
         int numRests = 0;
-        for (int i = 0; i < TOTAL_TOGGLES-3; ++i) {
+        for (int i = 0; i < TOTAL_TOGGLES-3; ++i) {            
             if (!notes_present[i]) {
                 if (timestamps[i+1] - timestamps[i] > 35) {
                     #ifdef DEBUG
                         Serial.println(timestamps[i+1] - timestamps[i]);
                     #endif // DEBUG
-                    tempo += int(timestamps[i+1] - timestamps[i]);  // is a rest, add to calc tempo
+                    tempo += int(timestamps[i+1] - timestamps[i] + 10);  // is a rest, add to calc tempo
                     ++numRests;
                 }
             }
