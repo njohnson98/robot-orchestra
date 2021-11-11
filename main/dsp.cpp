@@ -2,9 +2,10 @@
 
 #include "Arduino.h"
 
-#define DOWNSAMPLE_RATE 55  // number of samples to average in digital low pass filter
-#define NOTE_THRESHOLD .2   // threshold to define whether note prestent or not
+#define DOWNSAMPLE_RATE 40  // number of samples to average in digital low pass filter
+#define NOTE_THRESHOLD .15   // threshold to define whether note prestent or not
 #define MIC_OFFSET 0 // mic offset is 0 now after the filter  --> mic offset before: 1023.0*5.0/5.0/2.0
+#define CONSEQ_NOTES 4
 
 namespace dsp {
 
@@ -23,6 +24,7 @@ namespace dsp {
             int micVal = analogRead(mic);
             micCal = (micVal > micCal) ? micVal : micCal;
         }
+        micCal = 100;
 
         #ifdef DEBUG
             Serial.print("Mic Cal: ");
@@ -31,7 +33,7 @@ namespace dsp {
 
         int noteThreshold = int(micCal * NOTE_THRESHOLD);
         unsigned long tempTimestamp = 0;
-        bool isConseq = false;  // used to make sure we don't get one false reading that indicates we have a note, must get 2 consecqutive
+        uint8_t numConseq = 0;  // used to make sure we don't get one false reading that indicates we have a note, must have configurable consequitive amount
         while (numNotes < TOTAL_TOGGLES) {
             float noteAvg = 0;
             for (int i = 0; i < DOWNSAMPLE_RATE; ++i) {
@@ -41,10 +43,10 @@ namespace dsp {
 
             bool notePresent = noteAvg > noteThreshold;  // true if above threshold, false otherwise
             if (numNotes >= 0 && notePresent != prevNotePresent) {
-                if (!isConseq) {
-                    isConseq = true;
+                if (numConseq < CONSEQ_NOTES) {
+                    ++numConseq;
                     tempTimestamp = millis();  // will be used for timestamp for next if following note is conseq
-                } else if (isConseq) {
+                } else {
                     notes_present[numNotes] = notePresent;
                     timestamps[numNotes] = tempTimestamp;
                     #ifdef DEBUG
@@ -54,17 +56,17 @@ namespace dsp {
                     #endif  // DEBUG
                     ++numNotes;
                     prevNotePresent = notePresent;
+                    numConseq = 0;
                 }
                 
             } else if (numNotes < 0) {
-            
                 prevNotePresent = notePresent;
                 ++numNotes;
                 #ifdef DEBUG
                     Serial.println("Waiting for first toggle...");
                 #endif  // DEBUG
             } else {
-                isConseq = false;
+                numConseq = 0;
             }
         }
 
@@ -72,7 +74,7 @@ namespace dsp {
         int numRests = 0;
         for (int i = 0; i < TOTAL_TOGGLES-3; ++i) {
             if (!notes_present[i]) {
-                if (timestamps[i+1] - timestamps[i] > 20) {
+                if (timestamps[i+1] - timestamps[i] > 35) {
                     #ifdef DEBUG
                         Serial.println(timestamps[i+1] - timestamps[i]);
                     #endif // DEBUG
@@ -112,11 +114,13 @@ namespace dsp {
         for (int i = 0; i < SONG_LENGTH; i++) {
             if (note_length == beats[i]) {
                 match_index = i;
+                Serial.print("Match Index: ");
+                Serial.println(match_index);
                 break;
             }
         }
 
-        unsigned long dt = millis() - note_timestamp;
+        int dt = millis() - note_timestamp;
         while (dt > 0) {
             dt -= tempo * beats[match_index];  // TODO(James): Make tempo int
             ++match_index;
