@@ -112,7 +112,8 @@ void loop() {
 
     // set the octave based on range of potentiometer value
     //octave = ( int(analogRead(OctaveSelectPot)) / (10000 / 8) ) + 1;
-    octave = 5;
+    octave = analogRead(OctaveSelectPot) < 512 ? 4 : 6;
+
     int start_index = 0;
     // read mode switch
     mode = digitalRead(ModeSelect);
@@ -147,20 +148,6 @@ void loop() {
     }
     
     playSong(tempo, start_index);
-}
-
-
-void tempoSync() {
-    // tempo sync
-  	digitalWrite(SyncLED, HIGH);
-    tempo = 200;
-}
-
-
-void timingSync() {
-    // timing sync
-    digitalWrite(SyncLED, HIGH);
-    delay(2000);
 }
 
 
